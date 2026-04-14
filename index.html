@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPG Multi-Tracker</title>
+    <style>
+        :root { --bg: #0f0f0f; --card: #1a1a1a; --accent: #50fa7b; --text: #f8f8f2; --dim: #6272a4; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; gap: 20px; justify-content: center; padding: 20px; flex-wrap: wrap; }
+        #tracker-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+        .column { background: var(--card); border: 1px solid #333; border-radius: 12px; width: 360px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .nickname { font-size: 1.6rem; color: var(--accent); font-weight: bold; margin-bottom: 5px; }
+        .status { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
+        .online { color: var(--accent); }
+        .offline { color: #ff5555; }
+        .data-box { background: #21222c; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; border: 1px solid #282a36; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+        .label { color: var(--dim); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; }
+        .value { color: #fff; font-size: 0.95rem; text-align: right; }
+        .exp-bar-container { background: #44475a; height: 12px; border-radius: 6px; margin: 12px 0 4px 0; overflow: hidden; }
+        .exp-bar-fill { background: linear-gradient(90deg, #50fa7b, #8be9fd); height: 100%; width: 0%; transition: width 1s ease-in-out; }
+        .exp-percent { font-size: 0.75rem; color: var(--accent); text-align: right; margin-bottom: 10px; display: block; font-weight: bold; }
+        .update-time { font-size: 0.7rem; color: #44475a; margin-top: 15px; text-align: center; font-style: italic; }
+        /* New styling for the log history */
+        .log-history {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dotted var(--dim);
+        }
+        .log-header {
+            font-size: 0.7rem;
+            color: var(--dim);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .log-list {
+            font-family: 'Consolas', monospace;
+            font-size: 0.75rem;
+            color: var(--text);
+            opacity: 0.6;
+            line-height: 1.4;
+        }
+        .log-item {
+            padding: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .log-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <div id="tracker-container"></div>
+
+    <script>
+        const ACCESS_TOKEN = 'sl.u.AGaILzOM8Rey7UnGFev1Jb-p7rMk7vg35kUrigtaf12SE8FmaxzSJgfKkidDT_-vCRmw3cjU8TUmijBVW17RX0-gEr-l4mZ3dA7EbiwV3pntAogsDlP0npBFarEJYr169dq3b2PKIrFmEVflqUW8yP9dWI3m2Du6pyHK4rVelvrSlzp4bkpZ0VjIE_IhhZfw-rvtEfY9-duReS0czmNfzBlTMQR0789yzy2A2xOvZTIUkwzIGDBnm6Ipyz0E70Rv8quTbAJT4SHDFp9NFFCbVp1m0ZTJMKEymSrY8YwIZbebJViOyMtBLcfBOVByjUUV0K17yc6jw5umrm8w7BKBWDk1FMQRzJqM8-vgJc_NRkMicw4aByWLc2ZeOrUnzmBvgPPYbOmQeGK3cpCrMNGO38idducfWMY4-op4vOwRqVZhlG47BzLZpKIll2wlJ0YRXBLkeJ4JtTVC50zyS1LdtoGg2aN852xnU-t_m9NSz0KL2fVPgTyii9jKYCULkLEIEtJp2VkYLPMu4_lv7unvxZoFX21_xiKeQYOMZJ0Yud-UJIKlYXBdD3Ff88FxMHwk1MQ3jiXbROKy5dbyMK19_RAqVGyBsqpntr7rtHB-NmUsaUB847ZzicLQJeHVyNBqzyj4mY4TVQnqqk1L8XUfCVNQXiiA7tnztcdYFcQ6RzLLtvRchsRSMprvz5FTiL9EWkgcCD0s4G3bXjCH31v9y73hWWCDYRa90SrrixkxgeD_vOqB58o7y_NMZgPys7rDZhYsXzO9FmoQPsRMFzWonL8n3SHPfr5qT3TOHlZnCKiRkbg3BmQoaIBe9YBreSYCqRPHvQT2TXv1gDDAo4V-WqCywcQ2IdhDaFbIUkTow6b_Vz1Xenb3gXh_DkCh_auJDglmvX7Zr84y8y31QeTj07wRAKkuLHSGWN3uSQe1l4hUDXAkhc0EbnlN5lyJLfN64LrsBGfwyTdrZrLGYv0C0CNELlzdIWi9SzTpzu6MPNlF7Udh4DN7PAaXU7_gpSYjuQx4bZOW7PKY2dhRov2GnjukHpTy_2dx3g73F8HBAPVqIEn1Sma87qvwg-bCpXGr4WF9yhm6Fs1c71L4Yx_G60IDRDTRCijPf_iBvG0vrMfREOw3NOgzzKCsTQuZdljZj04dEAouUwGr14ibpkpYOpqvqEmdufOyIya5vsBcaS3ny3vz1_--o9unmYvB5MZJ9bdHfvP6AdIXlHa3zw1cpxfbT2-bry7HZPGOvCq0t3jz-5hRP2gqPb1OG4FOHM6aZfAmewCfPkhIOK4Fld11XzoWkK__GMniXacdPqDIdXWGI8ZPJQIkhAuUZ0VMME-JXl1Lmrxry0b5g5Zvl1u6EkRlhCL3sfqRLenjUA2j1ZDSFvRBSU1yGsmGL485tPGYURjbtLzPOPEzUyl_vLTa5DXZ35DI7i_zO710O_eT0fWxHJH0D0BSIAy6wqLaX7tf04j1Y4pYQJ0wXmpKZCrRV8yU';
+
+        // DATABASE: List the Title and the Total EXP goal for the NEXT level
+        const EXP_DATABASE = {
+            "1": { title: "Newbie", nextLevelGoal: 220 },
+            "2": { title: "Newbie", nextLevelGoal: 1260 },
+            "3": { title: "Newbie", nextLevelGoal: 3480 },
+            "4": { title: "Newbie", nextLevelGoal: 7140 },
+            "5": { title: "Newbie", nextLevelGoal: 12500 },
+            "6": { title: "Novice", nextLevelGoal: 19695 },
+            "7": { title: "Novice", nextLevelGoal: 29000 },
+            "8": { title: "Novice", nextLevelGoal: 40500 },
+            "9": { title: "Novice", nextLevelGoal: 54500 },
+            "10": { title: "Novice", nextLevelGoal: 71000 },
+            "11": { title: "Advanced Dancer", nextLevelGoal: 90000 },
+            "12": { title: "Advanced Dancer", nextLevelGoal: 112000 },
+            "13": { title: "Advanced Dancer", nextLevelGoal: 137000 },
+            "14": { title: "Advanced Dancer", nextLevelGoal: 165000 },
+            "15": { title: "Advanced Dancer", nextLevelGoal: 196000 },
+            "16": { title: "Clubber", nextLevelGoal: 230500 },
+            "17": { title: "Clubber", nextLevelGoal: 268500 },
+            "18": { title: "Clubber", nextLevelGoal: 310000 },
+            "19": { title: "Clubber", nextLevelGoal: 354500 },
+            "20": { title: "Clubber", nextLevelGoal: 403500 },
+            "21": { title: "Junior Dancer", nextLevelGoal: 456000 },
+            "22": { title: "Junior Dancer", nextLevelGoal: 512000 },
+            "23": { title: "Junior Dancer", nextLevelGoal: 572500 },
+            "24": { title: "Junior Dancer", nextLevelGoal: 637000 },
+            "25": { title: "Junior Dancer", nextLevelGoal: 705500 },
+            "26": { title: "Senior Dancer", nextLevelGoal: 778000 },
+            "27": { title: "Senior Dancer", nextLevelGoal: 855500 },
+            "28": { title: "Senior Dancer", nextLevelGoal: 937000 },
+            "29": { title: "Senior Dancer", nextLevelGoal: 1023000 },
+            "30": { title: "Senior Dancer", nextLevelGoal: 1113500 },
+            "31": { title: "Semi-Pro Dancer", nextLevelGoal: 1208500 },
+            "32": { title: "Semi-Pro Dancer", nextLevelGoal: 1308500 },
+            "33": { title: "Semi-Pro Dancer", nextLevelGoal: 1413500 },
+            "34": { title: "Semi-Pro Dancer", nextLevelGoal: 1523000 },
+            "35": { title: "Semi-Pro Dancer", nextLevelGoal: 1638000 },
+            "36": { title: "Pro Dancer", nextLevelGoal: 1757500 },
+            "37": { title: "Pro Dancer", nextLevelGoal: 1882500 },
+            "38": { title: "Pro Dancer", nextLevelGoal: 2012000 },
+            "39": { title: "Pro Dancer", nextLevelGoal: 2147500 },
+            "40": { title: "Pro Dancer", nextLevelGoal: 2288000 },
+            "41": { title: "Dance Master", nextLevelGoal: 2434000 },
+            "42": { title: "Dance Master", nextLevelGoal: 2585000 },
+            "43": { title: "Dance Master", nextLevelGoal: 2742000 },
+            "44": { title: "Dance Master", nextLevelGoal: 2904500 },
+            "45": { title: "Dance Master", nextLevelGoal: 3072500 },
+            "46": { title: "King", nextLevelGoal: 3246500 },
+            "47": { title: "King", nextLevelGoal: 3426000 },
+            "48": { title: "King", nextLevelGoal: 3611000 },
+            "49": { title: "King", nextLevelGoal: 3802500 },
+            "50": { title: "King", nextLevelGoal: 4000000 },
+            "51": { title: "World Star", nextLevelGoal: 4300000 },
+            "52": { title: "World Star", nextLevelGoal: 4650000 },
+            "53": { title: "World Star", nextLevelGoal: 5000000 },
+            "54": { title: "World Star", nextLevelGoal: 5400000 },
+            "55": { title: "World Star", nextLevelGoal: 5850000 },
+            "56": { title: "Superstar", nextLevelGoal: 6350000 },
+            "57": { title: "Superstar", nextLevelGoal: 6690000 },
+            "58": { title: "Superstar", nextLevelGoal: 7500000 },
+            "59": { title: "Superstar", nextLevelGoal: 7850000 },
+            "60": { title: "Superstar", nextLevelGoal: 8400000 },
+            "61": { title: "Audition Master", nextLevelGoal: 9000000 },
+            "62": { title: "Audition Master", nextLevelGoal: 9600000 },
+            "63": { title: "Audition Master", nextLevelGoal: 10250000 },
+            "64": { title: "Audition Master", nextLevelGoal: 10900000 },
+            "65": { title: "Audition Master", nextLevelGoal: 11600000 },
+            "66": { title: "Audition Elite", nextLevelGoal: 12350000 },
+            "67": { title: "Audition Elite", nextLevelGoal: 13150000 },
+            "68": { title: "Audition Elite", nextLevelGoal: 14000000 },
+            "69": { title: "Audition Elite", nextLevelGoal: 14900000 },
+            "70": { title: "Audition Elite", nextLevelGoal: 15850000 },
+            "71": { title: "Audition Royale", nextLevelGoal: 16850000 },
+            "72": { title: "Audition Royale", nextLevelGoal: 17850000 },
+            "73": { title: "Audition Royale", nextLevelGoal: 18850000 },
+            "74": { title: "Audition Royale", nextLevelGoal: 19850000 },
+            "75": { title: "Audition Royale", nextLevelGoal: 21850000 },
+            "76": { title: "Audition Superstar", nextLevelGoal: 23850000 },
+            "77": { title: "Audition Superstar", nextLevelGoal: 25850000 },
+            "78": { title: "Audition Superstar", nextLevelGoal: 27850000 },
+            "79": { title: "Audition Superstar", nextLevelGoal: 29850000 },
+            "80": { title: "Audition Superstar", nextLevelGoal: 32850000 },
+            "81": { title: "Audition Superhero", nextLevelGoal: 35850000 },
+            "82": { title: "Audition Superhero", nextLevelGoal: 38850000 },
+            "83": { title: "Audition Superhero", nextLevelGoal: 41850000 },
+            "84": { title: "Audition Superhero", nextLevelGoal: 44850000 },
+            "85": { title: "Audition Superhero", nextLevelGoal: 48850000 },
+            "86": { title: "Audition Maestro", nextLevelGoal: 52850000 },
+            "87": { title: "Audition Maestro", nextLevelGoal: 56850000 },
+            "88": { title: "Audition Maestro", nextLevelGoal: 60850000 },
+            "89": { title: "Audition Maestro", nextLevelGoal: 64850000 },
+            "90": { title: "Audition Maestro", nextLevelGoal: 69850000 },
+            "91": { title: "Blue Maestro", nextLevelGoal: 74850000 },
+            "92": { title: "Blue Maestro", nextLevelGoal: 79850000 },
+            "93": { title: "Blue Maestro", nextLevelGoal: 84850000 },
+            "94": { title: "Blue Maestro", nextLevelGoal: 89850000 },
+            "95": { title: "Blue Maestro", nextLevelGoal: 95850000 },
+            "96": { title: "Orange Maestro", nextLevelGoal: 101850000 },
+            "97": { title: "Orange Maestro", nextLevelGoal: 107850000 },
+            "98": { title: "Orange Maestro", nextLevelGoal: 113850000 },
+            "99": { title: "Orange Maestro", nextLevelGoal: 119850000 },
+            "100": { title: "Orange Maestro", nextLevelGoal: 126850000 },
+            "101": { title: "Green Maestro", nextLevelGoal: 133850000 },
+            "102": { title: "Green Maestro", nextLevelGoal: 140850000 },
+            "103": { title: "Green Maestro", nextLevelGoal: 147850000 },
+            "104": { title: "Green Maestro", nextLevelGoal: 154850000 },
+            "105": { title: "Green Maestro", nextLevelGoal: 162850000 },
+            "106": { title: "Purple Maestro", nextLevelGoal: 170850000 },
+            "107": { title: "Purple Maestro", nextLevelGoal: 178850000 },
+            "108": { title: "Purple Maestro", nextLevelGoal: 186850000 },
+            "109": { title: "Purple Maestro", nextLevelGoal: 194850000 },
+            "110": { title: "Purple Maestro", nextLevelGoal: 203850000 },
+            "111": { title: "Gold Maestro", nextLevelGoal: 212850000 },
+            "112": { title: "Gold Maestro", nextLevelGoal: 221850000 },
+            "113": { title: "Gold Maestro", nextLevelGoal: 230850000 },
+            "114": { title: "Gold Maestro", nextLevelGoal: 239850000 },
+            "115": { title: "Gold Maestro", nextLevelGoal: 249850000 },
+            "116": { title: "White Maestro", nextLevelGoal: 259850000 },
+            "117": { title: "White Maestro", nextLevelGoal: 269850000 },
+            "118": { title: "White Maestro", nextLevelGoal: 279850000 },
+            "119": { title: "White Maestro", nextLevelGoal: 289850000 },
+            "120": { title: "White Maestro", nextLevelGoal: 300850000 },
+            "121": { title: "Pink Maestro", nextLevelGoal: 311850000 },
+            "122": { title: "Pink Maestro", nextLevelGoal: 322850000 },
+            "123": { title: "Pink Maestro", nextLevelGoal: 333850000 },
+            "124": { title: "Pink Maestro", nextLevelGoal: 344850000 },
+            "125": { title: "Pink Maestro", nextLevelGoal: 357850000 },
+            "126": { title: "Blue S.Maestro", nextLevelGoal: 370850000 },
+            "127": { title: "Blue S.Maestro", nextLevelGoal: 383850000 },
+            "128": { title: "Blue S.Maestro", nextLevelGoal: 396850000 },
+            "129": { title: "Blue S.Maestro", nextLevelGoal: 409850000 },
+            "130": { title: "Blue S.Maestro", nextLevelGoal: 424850000 },
+            "131": { title: "Orange S.Maestro", nextLevelGoal: 439850000 },
+            "132": { title: "Orange S.Maestro", nextLevelGoal: 454850000 },
+            "133": { title: "Orange S.Maestro", nextLevelGoal: 469850000 },
+            "134": { title: "Orange S.Maestro", nextLevelGoal: 484850000 },
+            "135": { title: "Orange S.Maestro", nextLevelGoal: 501850000 },
+            "136": { title: "Green S.Maestro", nextLevelGoal: 518850000 },
+            "137": { title: "Green S.Maestro", nextLevelGoal: 535850000 },
+            "138": { title: "Green S.Maestro", nextLevelGoal: 552850000 },
+            "139": { title: "Green S.Maestro", nextLevelGoal: 569850000 },
+            "140": { title: "Green S.Maestro", nextLevelGoal: 588850000 },
+            "141": { title: "Purple S.Maestro", nextLevelGoal: 607850000 },
+            "142": { title: "Purple S.Maestro", nextLevelGoal: 626850000 },
+            "143": { title: "Purple S.Maestro", nextLevelGoal: 645850000 },
+            "144": { title: "Purple S.Maestro", nextLevelGoal: 664850000 },
+            "145": { title: "Purple S.Maestro", nextLevelGoal: 685850000 },
+            "146": { title: "Gold S.Maestro", nextLevelGoal: 706850000 },
+            "147": { title: "Gold S.Maestro", nextLevelGoal: 727850000 },
+            "148": { title: "Gold S.Maestro", nextLevelGoal: 748850000 },
+            "149": { title: "Gold S.Maestro", nextLevelGoal: 769850000 },
+            "150": { title: "Gold S.Maestro", nextLevelGoal: 792850000 },
+            "151": { title: "White S.Maestro", nextLevelGoal: 815850000 },
+            "152": { title: "White S.Maestro", nextLevelGoal: 838850000 },
+            "153": { title: "White S.Maestro", nextLevelGoal: 861850000 },
+            "154": { title: "White S.Maestro", nextLevelGoal: 884850000 },
+            "155": { title: "White S.Maestro", nextLevelGoal: 909850000 },
+            "156": { title: "Pink S.Maestro", nextLevelGoal: 934850000 },
+            "157": { title: "Pink S.Maestro", nextLevelGoal: 959850000 },
+            "158": { title: "Pink S.Maestro", nextLevelGoal: 984850000 },
+            "159": { title: "Pink S.Maestro", nextLevelGoal: 1009850000 },
+            "160": { title: "Pink S.Maestro", nextLevelGoal: 1370850000 },
+            "161": { title: "Blue G.Maestro", nextLevelGoal: 1065850000 },
+            "162": { title: "Blue G.Maestro", nextLevelGoal: 1093850000 },
+            "163": { title: "Blue G.Maestro", nextLevelGoal: 1121850000 },
+            "164": { title: "Blue G.Maestro", nextLevelGoal: 1149850000 },
+            "165": { title: "Blue G.Maestro", nextLevelGoal: 1180850000 },
+            "166": { title: "Orange G.Maestro", nextLevelGoal: 1211850000 },
+            "167": { title: "Orange G.Maestro", nextLevelGoal: 1242850000 },
+            "168": { title: "Orange G.Maestro", nextLevelGoal: 1273850000 },
+            "169": { title: "Orange G.Maestro", nextLevelGoal: 1304850000 },
+            "170": { title: "Orange G.Maestro", nextLevelGoal: 1338850000 },
+            "171": { title: "Green G.Maestro", nextLevelGoal: 1372850000 },
+            "172": { title: "Green G.Maestro", nextLevelGoal: 1406850000 },
+            "173": { title: "Green G.Maestro", nextLevelGoal: 1440850000 },
+            "174": { title: "Green G.Maestro", nextLevelGoal: 1474850000 },
+            "175": { title: "Green G.Maestro", nextLevelGoal: 1511850000 },
+            "176": { title: "Purple G.Maestro", nextLevelGoal: 1545850000 },
+            "177": { title: "Purple G.Maestro", nextLevelGoal: 1585850000 },
+            "178": { title: "Purple G.Maestro", nextLevelGoal: 1622850000 },
+            "179": { title: "Purple G.Maestro", nextLevelGoal: 1659850000 },
+            "180": { title: "Purple G.Maestro", nextLevelGoal: 1699850000 },
+            "181": { title: "Gold G.Maestro", nextLevelGoal: 1739850000 },
+            "182": { title: "Gold G.Maestro", nextLevelGoal: 1779850000 },
+            "183": { title: "Gold G.Maestro", nextLevelGoal: 1819850000 },
+            "184": { title: "Gold G.Maestro", nextLevelGoal: 1859850000 },
+            "185": { title: "Gold G.Maestro", nextLevelGoal: 1902850000 },
+            "186": { title: "White G.Maestro", nextLevelGoal: 1945850000 },
+            "187": { title: "White G.Maestro", nextLevelGoal: 1988850000 },
+            "188": { title: "White G.Maestro", nextLevelGoal: 2031850000 },
+            "189": { title: "White G.Maestro", nextLevelGoal: 2074850000 },
+            "190": { title: "White G.Maestro", nextLevelGoal: 2120850000 },
+            "191": { title: "Pink G.Maestro", nextLevelGoal: 2166850000 },
+            "192": { title: "Pink G.Maestro", nextLevelGoal: 2212850000 },
+            "193": { title: "Pink G.Maestro", nextLevelGoal: 2258850000 },
+            "194": { title: "Pink G.Maestro", nextLevelGoal: 2304850000 },
+            "195": { title: "Pink G.Maestro", nextLevelGoal: 2354850000 },
+            "196": { title: "Gold L. Maestro", nextLevelGoal: 2404850000 },
+            "197": { title: "Gold L. Maestro", nextLevelGoal: 2454850000 },
+            "198": { title: "Gold L. Maestro", nextLevelGoal: 2504850000 },
+            "199": { title: "Gold L. Maestro", nextLevelGoal: 2554850000 },
+            "200": { title: "Gold Max L. Maestro", nextLevelGoal: 0 }
+        };
+
+        const myAccounts = [
+            { name: "Roxveil", link: "https://www.dropbox.com/scl/fo/o4673p0c5idsdmhj5wgtn/AOBOX-7gI0oumeJCaL7G41s?rlkey=azncvpcgxzqgxkwswlumebj74&e=4&dl=0", lastLine: "" },
+            { name: "-Lizette-", link: "https://www.dropbox.com/scl/fo/zczx029h00olhspfn6ooh/AJQDI6ACCshY_W3karOhsoU?rlkey=q9w4yw28ecinhwcnt3mcxvxwu&e=3&dl=0", lastLine: "" }
+        ];
+
+        function getTitleColor(title) {
+            const t = title.toLowerCase();
+            if (t.includes('orange')) return '#ffb86c';
+            if (t.includes('green')) return '#50fa7b';
+            if (t.includes('blue')) return '#8be9fd';
+            return '#f8f8f2';
+        }
+
+        function createAccountUI() {
+            const container = document.getElementById('tracker-container');
+            myAccounts.forEach((acc, index) => {
+                container.innerHTML += `
+                    <div class="column">
+                        <div class="nickname">${acc.name}</div>
+                        <div id="status-${index}" class="status offline">Checking...</div>
+                        <div class="data-box">
+                            <div class="row"><span class="label">Last Update</span><span id="time-${index}" class="value">--</span></div>
+                            <div class="row"><span class="label">Level</span><span id="lvl-${index}" class="value">--</span></div>
+                            <div class="row"><span class="label">Current EXP</span><span id="exp-${index}" class="value">--</span></div>
+                            <div class="row"><span class="label">EXP Gained</span><span id="expg-${index}" class="value">--</span></div>
+                            <div class="exp-bar-container"><div id="bar-${index}" class="exp-bar-fill"></div></div>
+                            <span id="pct-${index}" class="exp-percent">0%</span>
+                            <div class="row"><span class="label">Next Level</span><span id="nlvl-${index}" class="value">--</span></div>
+                            <div class="row"><span class="label">Remaining</span><span id="rem-${index}" class="value">--</span></div>
+                        </div>
+
+                        <div class="log-history">
+                            <div class="log-header"><span>Recent Activity</span><span>Last 10 Logs</span></div>
+                            <div id="logs-${index}" class="log-list"></div>
+                        </div>
+                        <div id="sync-${index}" class="update-time"></div>
+                    </div>`;
+            });
+        }
+
+        async function updateAccount(index) {
+            const acc = myAccounts[index];
+            const today = new Date().toISOString().split('T')[0];
+            
+            try {
+                const response = await fetch('https://content.dropboxapi.com/2/sharing/get_shared_link_file', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                        'Dropbox-API-Arg': JSON.stringify({ "url": acc.link, "path": `/${today}.txt` })
+                    }
+                });
+                if (!response.ok) throw new Error();
+                const text = await response.text();
+                const lines = text.trim().split('\n');
+                
+                // Capture last 10 lines, newest first
+                const history = lines.slice(-10).reverse();
+                const lastLine = lines[lines.length - 1];
+
+                renderUI(index, lastLine, history);
+                acc.lastLine = lastLine;
+
+            } catch (e) { 
+                document.getElementById(`status-${index}`).className = "status offline";
+                document.getElementById(`status-${index}`).innerText = "Offline (Link Error)";
+            }
+        }
+
+        function renderUI(index, line, history) {
+            const logTime = line.split('=')[0];
+            const statsPart = line.split('=')[1].split('|');
+
+            // --- GMT+7 STALENESS CHECK ---
+            const now = new Date();
+            const currentWIBStr = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            }).format(now);
+
+            const toSeconds = (t) => {
+                const [h, m, s] = t.split(':').map(Number);
+                return (h * 3600) + (m * 60) + s;
+            };
+
+            const diff = (toSeconds(currentWIBStr) - toSeconds(logTime) + 86400) % 86400;
+            const isStale = diff > 600; 
+            // -----------------------------
+
+            const currentLevel = statsPart[0].replace('Lv.', '').trim();
+            const nextLevel = parseInt(currentLevel, 10) + 1; 
+            const thisLevel = parseInt(currentLevel, 10) - 1; 
+            const expGained = statsPart[1].trim();
+            const currentTotalExp = parseInt(statsPart[2].replace(/,/g, '').trim());
+
+            // Update Status: Check for Staleness OR "terputus" message
+            const statusEl = document.getElementById(`status-${index}`);
+            if (isStale || line.includes("terputus")) {
+                statusEl.innerText = isStale ? "Offline (Stale)" : "Offline (Disconnected)";
+                statusEl.className = "status offline";
+            } else {
+                statusEl.innerText = "Online";
+                statusEl.className = "status online";
+            }
+
+            // Update Main Stats
+            document.getElementById(`time-${index}`).innerText = logTime;
+            document.getElementById(`exp-${index}`).innerText = currentTotalExp.toLocaleString();
+            document.getElementById(`expg-${index}`).innerText = expGained;
+
+            // Update History List
+            const logContainer = document.getElementById(`logs-${index}`);
+            logContainer.innerHTML = history.map(h => `<div class="log-item">${h}</div>`).join('');
+
+            const dbEntry = EXP_DATABASE[currentLevel];
+            const dbEntry2 = EXP_DATABASE[nextLevel];
+            const dbEntry3 = EXP_DATABASE[thisLevel];
+
+            if (dbEntry) {
+                const goal = dbEntry.nextLevelGoal;
+                const thisExp = dbEntry3 ? dbEntry3.nextLevelGoal : 0;
+                const title = dbEntry.title;
+                const ntitle = dbEntry2 ? dbEntry2.title : title;
+
+                const percent = Math.min(((currentTotalExp - thisExp) / (goal - thisExp)) * 100, 100).toFixed(2);
+                document.getElementById(`bar-${index}`).style.width = percent + "%";
+                document.getElementById(`pct-${index}`).innerText = percent + "%";
+                document.getElementById(`rem-${index}`).innerText = (goal - currentTotalExp).toLocaleString();
+
+                const lvlEl = document.getElementById(`lvl-${index}`);
+                lvlEl.innerText = `${title} Lv. ${currentLevel}`;
+                lvlEl.style.color = getTitleColor(title);
+
+                const nlvlEl = document.getElementById(`nlvl-${index}`);
+                nlvlEl.innerText = `${ntitle} Lv. ${nextLevel}`;
+                nlvlEl.style.color = getTitleColor(ntitle);
+            }
+
+            document.getElementById(`sync-${index}`).innerText = "Synced: " + new Date().toLocaleTimeString();
+        }
+
+        createAccountUI();
+        const startUpdates = () => myAccounts.forEach((_, i) => updateAccount(i));
+        startUpdates();
+        setInterval(startUpdates, 600000); 
+    </script>
+</body>
+</html>
