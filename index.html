@@ -32,10 +32,39 @@
         .log-list { font-family: 'Consolas', monospace; font-size: 0.65rem; color: var(--text); opacity: 0.7; }
         .log-item { padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
 
-        /* Progress Bar */
-        .exp-bar-container { background: #44475a; height: 10px; border-radius: 5px; margin: 10px 0; overflow: hidden; }
-        .exp-bar-fill { background: linear-gradient(90deg, #50fa7b, #8be9fd); height: 100%; width: 0%; transition: width 1s ease; }
-        .exp-percent { font-size: 0.75rem; color: var(--accent); text-align: right; font-weight: bold; display: block; }
+        /* Container to hold both bar and percentage */
+        .exp-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px; /* Space between bar and text */
+            margin: 10px 0;
+        }
+
+        /* Ensure the container has a defined height */
+        .exp-bar-container { 
+            background: #44475a; 
+            height: 12px;           /* Must have a height */
+            border-radius: 6px; 
+            overflow: hidden;
+            flex: 1;                /* Grows to fill space next to % */
+            display: block;         /* Ensures it renders as a block */
+        }
+
+        /* Ensure the fill takes up that full height */
+        .exp-bar-fill { 
+            background: linear-gradient(90deg, #50fa7b, #8be9fd); 
+            height: 100%;           /* Takes 100% of the 12px container */
+            width: 0%;              /* Start at 0 */
+            transition: width 1s ease-in-out; 
+            border-radius: 6px;
+        }
+        .exp-percent { 
+            font-size: 0.8rem; 
+            color: var(--accent); 
+            font-weight: bold;
+            min-width: 50px; /* Prevents layout jump when numbers change */
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -317,9 +346,14 @@
                                 <div class="row"><span class="label">Current Level</span><span id="lvl-${index}" class="value">--</span></div>
                                 <div class="row"><span class="label">Current EXP</span><span id="exp-${index}" class="value">--</span></div>
                                 <div class="row"><span class="label">Gain</span><span id="expg-${index}" class="value">--</span></div>
-                                <div class="exp-bar-container"><div id="bar-${index}" class="exp-bar-fill"></div></div>
-                                <span id="pct-${index}" class="exp-percent">0%</span>
+                                <div class="exp-wrapper">
+                                    <div class="exp-bar-container">
+                                        <div id="bar-${index}" class="exp-bar-fill"></div>
+                                    </div>
+                                    <span id="pct-${index}" class="exp-percent">0%</span>
+                                </div>
                                 <div class="row"><span class="label">Next Level</span><span id="nlvl-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label"></span><span id="nlvle-${index}" class="value">--</span></div>
                                 <div class="row"><span class="label">Remaining</span><span id="rem-${index}" class="value">--</span></div>
                             </div>
                         </div>
@@ -370,6 +404,7 @@
             const currentWIBStr = new Intl.DateTimeFormat('en-GB', {
                 timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
             }).format(now);
+            const uDate = new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Jakarta', weekday:"short", day:"numeric", month:"short", year:"numeric"}).format(now);
 
             const toSeconds = (t) => {
                 const [h, m, s] = t.split(':').map(Number);
@@ -397,7 +432,7 @@
             }
 
             // Update Main Stats
-            document.getElementById(`time-${index}`).innerText = logTime;
+            document.getElementById(`time-${index}`).innerText = uDate + " | " + logTime;
             document.getElementById(`exp-${index}`).innerText = currentTotalExp.toLocaleString();
             document.getElementById(`expg-${index}`).innerText = expGained;
 
@@ -415,10 +450,26 @@
                 const title = dbEntry.title;
                 const ntitle = dbEntry2 ? dbEntry2.title : title;
 
-                const percent = Math.min(((currentTotalExp - thisExp) / (goal - thisExp)) * 100, 100).toFixed(2);
-                document.getElementById(`bar-${index}`).style.width = percent + "%";
-                document.getElementById(`pct-${index}`).innerText = percent + "%";
+                // Safety: Prevent division by zero
+                let percent = 0;
+                if (goal - thisExp > 0) {
+                    percent = Math.min(((currentTotalExp - thisExp) / (goal - thisExp)) * 100, 100).toFixed(2);
+                }
+
+                // Update the width
+                const barEl = document.getElementById(`bar-${index}`);
+                if (barEl) {
+                    barEl.style.width = percent + "%";
+                }
+
+                // Update the text
+                const pctEl = document.getElementById(`pct-${index}`);
+                if (pctEl) {
+                    pctEl.innerText = percent + "%";
+                }
+
                 document.getElementById(`rem-${index}`).innerText = (goal - currentTotalExp).toLocaleString();
+                document.getElementById(`nlvle-${index}`).innerText = goal.toLocaleString();
 
                 const lvlEl = document.getElementById(`lvl-${index}`);
                 lvlEl.innerText = `${title} Lv. ${currentLevel}`;
@@ -435,7 +486,7 @@
         createAccountUI();
         const startUpdates = () => myAccounts.forEach((_, i) => updateAccount(i));
         startUpdates();
-        setInterval(startUpdates, 600000); 
+        setInterval(startUpdates, 60000); 
     </script>
 </body>
 </html>
