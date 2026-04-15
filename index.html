@@ -5,15 +5,65 @@
     <style>
         :root { --bg: #0f0f0f; --card: #1a1a1a; --accent: #50fa7b; --text: #f8f8f2; --dim: #6272a4; --log-bg: #21222c;}
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        #tracker-container { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 900px; }
-        .column { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box; }
-        .account-layout { display: flex; gap: 20px; flex-direction: column; /* Stacks on mobile */ }
-        @media (min-width: 600px) {
-            .account-layout { flex-direction: row; align-items: flex-start; }
-            .log-history { flex: 1.2; order: 1; } /* Logs on the left */
-            .data-box { flex: 2; order: 2; } /* Main data on the right */
+        /* Container adjustments */
+        #tracker-container { width: 100%; max-width: 900px; margin: 0 auto; }
+        .column { width: 100%; margin-bottom: 25px; box-sizing: border-box; }
+
+        /* The layout: Top (Main), Bottom (Logs + Info) */
+        .account-layout { display: flex; flex-direction: column; gap: 20px; }
+
+        .bottom-grid { 
+            display: flex; 
+            gap: 20px; 
+            flex-direction: column; /* Stacks on mobile */
         }
-        .nickname { font-size: 1.4rem; color: var(--accent); font-weight: bold; }
+
+        /* Tablet/Desktop Side-by-Side for the bottom row */
+        @media (min-width: 650px) {
+            .bottom-grid { flex-direction: row; align-items: flex-start; }
+            .log-history { flex: 1; } 
+            .acc-info { flex: 1; }
+        }
+
+        /* Styling for the new Acc Info box */
+        .acc-info {
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #8be9fd;
+        }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .info-label { color: var(--dim); font-size: 0.65rem; text-transform: uppercase; }
+        .info-value { color: #fff; font-size: 0.75rem; font-family: 'Consolas', monospace; }
+        /* Each account is now wrapped in this main box */
+        .account-card {
+            background: var(--card);
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px; /* Space between each account box */
+            width: 100%;
+            max-width: 850px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            transition: transform 0.2s ease;
+        }
+
+        /* Optional: Slight lift effect on hover */
+        .account-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--dim);
+        }
+
+        /* Ensure the nickname stays inside the box styling */
+        .nickname { 
+            font-size: 1.6rem; 
+            color: var(--accent); 
+            font-weight: bold; 
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 10px;
+        }
         .status { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
         .online { color: var(--accent); }
         .offline { color: #ff5555; }
@@ -329,36 +379,50 @@
 
         function createAccountUI() {
             const container = document.getElementById('tracker-container');
+            container.innerHTML = ""; 
             myAccounts.forEach((acc, index) => {
                 container.innerHTML += `
-                    <div class="column">
-                        <div class="nickname">${acc.name}</div>
+                    <div class="account-card"> <div class="nickname">${acc.name}</div>
                         <div id="status-${index}" class="status offline">Checking...</div>
                         
                         <div class="account-layout">
-                            <div class="log-history">
-                                <div class="log-header"><span>Log History</span><span>Latest 10</span></div>
-                                <div id="logs-${index}" class="log-list"></div>
-                            </div>
-
                             <div class="data-box">
                                 <div class="row"><span class="label">Last Update</span><span id="time-${index}" class="value">--</span></div>
-                                <div class="row"><span class="label">Current Level</span><span id="lvl-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">Level</span><span id="lvl-${index}" class="value">--</span></div>
                                 <div class="row"><span class="label">Current EXP</span><span id="exp-${index}" class="value">--</span></div>
-                                <div class="row"><span class="label">Gain</span><span id="expg-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">EXP Gained</span><span id="expg-${index}" class="value">--</span></div>
+                                
                                 <div class="exp-wrapper">
                                     <div class="exp-bar-container">
                                         <div id="bar-${index}" class="exp-bar-fill"></div>
                                     </div>
                                     <span id="pct-${index}" class="exp-percent">0%</span>
                                 </div>
+
                                 <div class="row"><span class="label">Next Level</span><span id="nlvl-${index}" class="value">--</span></div>
-                                <div class="row"><span class="label"></span><span id="nlvle-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">Next Level Goal</span><span id="nlvle-${index}" class="value">--</span></div>
                                 <div class="row"><span class="label">Remaining</span><span id="rem-${index}" class="value">--</span></div>
                             </div>
-                        </div>
 
-                        <div id="sync-${index}" class="update-time" style="font-size: 0.6rem; color: var(--dim); margin-top: 10px; text-align: right;"></div>
+                            <div class="bottom-grid">
+                                <div class="log-history">
+                                    <div class="log-header"><span>Recent Activity</span><span>Latest 10</span></div>
+                                    <div id="logs-${index}" class="log-list"></div>
+                                </div>
+
+                                <div class="acc-info">
+                                    <div class="log-header"><span>Acc Info</span><span id="info-sync-${index}">--</span></div>
+                                    <div id="info-body-${index}">
+                                        <div class="info-row"><span class="info-label">Event</span><span class="info-value" id="info-evt-${index}">--</span></div>
+                                        <div class="info-row"><span class="info-label">Mark H</span><span class="info-value" id="info-mark-${index}">--</span></div>
+                                        <div class="info-row"><span class="info-label">Pet</span><span class="info-value" id="info-pet-${index}">--</span></div>
+                                        <div class="info-row"><span class="info-label">Platform</span><span class="info-value" id="info-plat-${index}">--</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="sync-${index}" class="update-time" style="text-align:right; font-size:0.6rem; color: var(--dim); margin-top:15px;"></div>
                     </div>`;
             });
         }
@@ -370,24 +434,41 @@
             const token = await refreshAccessToken();
             if (!token) return;
 
-            try {
-                const response = await fetch('https://content.dropboxapi.com/2/sharing/get_shared_link_file', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Dropbox-API-Arg': JSON.stringify({ "url": acc.link, "path": `/${today}.txt` })
-                    }
-                });
-                if (!response.ok) throw new Error();
-                const text = await response.text();
-                const lines = text.trim().split('\n');
-                
-                // Capture last 10 lines, newest first
-                const history = lines.slice(-10).reverse();
-                const lastLine = lines[lines.length - 1];
+            const dbFetch = (path) => fetch('https://content.dropboxapi.com/2/sharing/get_shared_link_file', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Dropbox-API-Arg': JSON.stringify({ "url": acc.link, "path": path })
+                }
+            });
 
-                renderUI(index, lastLine, history);
-                acc.lastLine = lastLine;
+            try {
+                // 1. Fetch Log Data
+                const logRes = await dbFetch(`/${today}.txt`);
+                if (logRes.ok) {
+                    const text = await logRes.text();
+                    const lines = text.trim().split('\n');
+                    const history = lines.slice(-10).reverse();
+                    renderUI(index, lines[lines.length - 1], history);
+                }
+
+                // 2. Fetch Info Data
+                const infoRes = await dbFetch(`/_Informasi.txt`);
+                if (infoRes.ok) {
+                    const infoText = await infoRes.text();
+                    const infoLines = infoText.split('\n');
+                    
+                    // Extracting specific lines based on your requirement
+                    // Line 6: Last Update (Index 5)
+                    // Lines 13-16: Event, Mark, Pet, Platform (Index 12-15)
+                    const lastUpd = infoLines[5]?.split(': ')[1] || '--';
+                    document.getElementById(`info-sync-${index}`).innerText = lastUpd.split(' ')[1]; // Just time
+                    
+                    document.getElementById(`info-evt-${index}`).innerText = infoLines[11]?.split(': ')[1] || '--';
+                    document.getElementById(`info-mark-${index}`).innerText = infoLines[12]?.split(': ')[1] || '--';
+                    document.getElementById(`info-pet-${index}`).innerText = infoLines[13]?.split(': ')[1] || '--';
+                    document.getElementById(`info-plat-${index}`).innerText = infoLines[14]?.split(': ')[1] || '--';
+                }
 
             } catch (e) { 
                 document.getElementById(`status-${index}`).className = "status offline";
