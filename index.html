@@ -1,55 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>RPG Multi-Tracker</title>
+    <title>Ayodance GB Log</title>
     <style>
-        :root { --bg: #0f0f0f; --card: #1a1a1a; --accent: #50fa7b; --text: #f8f8f2; --dim: #6272a4; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; gap: 20px; justify-content: center; padding: 20px; flex-wrap: wrap; }
-        #tracker-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-        .column { background: var(--card); border: 1px solid #333; border-radius: 12px; width: 360px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        .nickname { font-size: 1.6rem; color: var(--accent); font-weight: bold; margin-bottom: 5px; }
-        .status { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
+        :root { --bg: #0f0f0f; --card: #1a1a1a; --accent: #50fa7b; --text: #f8f8f2; --dim: #6272a4; --log-bg: #21222c;}
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        #tracker-container { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 900px; }
+        .column { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); box-sizing: border-box; }
+        .account-layout { display: flex; gap: 20px; flex-direction: column; /* Stacks on mobile */ }
+        @media (min-width: 600px) {
+            .account-layout { flex-direction: row; align-items: flex-start; }
+            .log-history { flex: 1.2; order: 1; } /* Logs on the left */
+            .data-box { flex: 2; order: 2; } /* Main data on the right */
+        }
+        .nickname { font-size: 1.4rem; color: var(--accent); font-weight: bold; }
+        .status { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
         .online { color: var(--accent); }
         .offline { color: #ff5555; }
-        .data-box { background: #21222c; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; border: 1px solid #282a36; }
+        .data-box { 
+            background: #21222c; padding: 15px; border-radius: 8px; border: 1px solid #282a36; width: 100%; box-sizing: border-box;
+        }
         .row { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
-        .label { color: var(--dim); font-size: 0.7rem; text-transform: uppercase; font-weight: bold; }
-        .value { color: #fff; font-size: 0.95rem; text-align: right; }
-        .exp-bar-container { background: #44475a; height: 12px; border-radius: 6px; margin: 12px 0 4px 0; overflow: hidden; }
-        .exp-bar-fill { background: linear-gradient(90deg, #50fa7b, #8be9fd); height: 100%; width: 0%; transition: width 1s ease-in-out; }
-        .exp-percent { font-size: 0.75rem; color: var(--accent); text-align: right; margin-bottom: 10px; display: block; font-weight: bold; }
-        .update-time { font-size: 0.7rem; color: #44475a; margin-top: 15px; text-align: center; font-style: italic; }
-        /* New styling for the log history */
-        .log-history {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px dotted var(--dim);
+        .label { color: var(--dim); font-size: 0.65rem; text-transform: uppercase; font-weight: bold; }
+        .value { color: #fff; font-size: 0.9rem; text-align: right; }
+
+        /* Log History Styling */
+        .log-history { 
+            background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border-left: 3px solid var(--accent);
         }
-        .log-header {
-            font-size: 0.7rem;
-            color: var(--dim);
-            text-transform: uppercase;
-            font-weight: bold;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .log-list {
-            font-family: 'Consolas', monospace;
-            font-size: 0.75rem;
-            color: var(--text);
-            opacity: 0.6;
-            line-height: 1.4;
-        }
-        .log-item {
-            padding: 2px 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-        }
-        .log-item:last-child { border-bottom: none; }
+        .log-header { font-size: 0.6rem; color: var(--dim); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .log-list { font-family: 'Consolas', monospace; font-size: 0.65rem; color: var(--text); opacity: 0.7; }
+        .log-item { padding: 4px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+
+        /* Progress Bar */
+        .exp-bar-container { background: #44475a; height: 10px; border-radius: 5px; margin: 10px 0; overflow: hidden; }
+        .exp-bar-fill { background: linear-gradient(90deg, #50fa7b, #8be9fd); height: 100%; width: 0%; transition: width 1s ease; }
+        .exp-percent { font-size: 0.75rem; color: var(--accent); text-align: right; font-weight: bold; display: block; }
     </style>
 </head>
 <body>
@@ -305,6 +291,10 @@
             if (t.includes('orange')) return '#ffb86c';
             if (t.includes('green')) return '#50fa7b';
             if (t.includes('blue')) return '#8be9fd';
+            if (t.includes('purple')) return '#cc3399';
+            if (t.includes('gold')) return '#ffeb99';
+            if (t.includes('white')) return '#f2f2f2';
+            if (t.includes('pink')) return '#ffb3d9';
             return '#f8f8f2';
         }
 
@@ -315,22 +305,26 @@
                     <div class="column">
                         <div class="nickname">${acc.name}</div>
                         <div id="status-${index}" class="status offline">Checking...</div>
-                        <div class="data-box">
-                            <div class="row"><span class="label">Last Update</span><span id="time-${index}" class="value">--</span></div>
-                            <div class="row"><span class="label">Level</span><span id="lvl-${index}" class="value">--</span></div>
-                            <div class="row"><span class="label">Current EXP</span><span id="exp-${index}" class="value">--</span></div>
-                            <div class="row"><span class="label">EXP Gained</span><span id="expg-${index}" class="value">--</span></div>
-                            <div class="exp-bar-container"><div id="bar-${index}" class="exp-bar-fill"></div></div>
-                            <span id="pct-${index}" class="exp-percent">0%</span>
-                            <div class="row"><span class="label">Next Level</span><span id="nlvl-${index}" class="value">--</span></div>
-                            <div class="row"><span class="label">Remaining</span><span id="rem-${index}" class="value">--</span></div>
+                        
+                        <div class="account-layout">
+                            <div class="log-history">
+                                <div class="log-header"><span>Log History</span><span>Latest 10</span></div>
+                                <div id="logs-${index}" class="log-list"></div>
+                            </div>
+
+                            <div class="data-box">
+                                <div class="row"><span class="label">Last Update</span><span id="time-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">Current Level</span><span id="lvl-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">Current EXP</span><span id="exp-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">Gain</span><span id="expg-${index}" class="value">--</span></div>
+                                <div class="exp-bar-container"><div id="bar-${index}" class="exp-bar-fill"></div></div>
+                                <span id="pct-${index}" class="exp-percent">0%</span>
+                                <div class="row"><span class="label">Next Level</span><span id="nlvl-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">Remaining</span><span id="rem-${index}" class="value">--</span></div>
+                            </div>
                         </div>
 
-                        <div class="log-history">
-                            <div class="log-header"><span>Recent Activity</span><span>Last 10 Logs</span></div>
-                            <div id="logs-${index}" class="log-list"></div>
-                        </div>
-                        <div id="sync-${index}" class="update-time"></div>
+                        <div id="sync-${index}" class="update-time" style="font-size: 0.6rem; color: var(--dim); margin-top: 10px; text-align: right;"></div>
                     </div>`;
             });
         }
