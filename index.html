@@ -495,9 +495,18 @@
             }).format(now);
             const uDate = new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Jakarta', weekday:"short", day:"numeric", month:"short", year:"numeric"}).format(now);
 
+            const toSeconds = (t) => {
+                    const p = t.split(':');
+                    // Handles cases where timestamp might be missing or malformed
+                    return p.length === 3 ? (parseInt(p[0]) * 3600) + (parseInt(p[1]) * 60) + parseInt(p[2]) : 0;
+                };
+            const diff = (toSeconds(currentWIBStr) - toSeconds(logTimeStr) + 86400) % 86400;
+            const isStale = diff > 300; // 5 minutes threshold
             const isDisconnected = line.includes("Koneksi terputus.");
             const isServerIssue = line.includes("Corrective action has been taken");
-            const isError = line.toLowerCase().includes("error");
+            const isLicense = line.includes("Success license");
+            const isErrorKeyword = line.toLowerCase().includes("error");
+            const hasError = isDisconnected || isServerIssue || isLicense || isErrorKeyword 
             // -----------------------------
 
             const currentLevel = statsPart[0].replace('Lv.', '').trim();
@@ -508,20 +517,23 @@
 
             // Update Status: Check for Staleness OR "terputus" message
             const statusEl = document.getElementById(`status-${index}`);
-                if (isDisconnected || isServerIssue || isError) {
-                    let reason = "Offline";
-                    
-                    // Optional: Specific labels so you know why it is offline
-                    if (isDisconnected) reason = "Offline (Disconnected)";
-                    else if (isServerIssue) reason = "Offline (Server Issue)";
-                    else if (isError) reason = "Offline (Error)";
-
-                    statusEl.innerText = reason;
-                    statusEl.className = "status offline";
-                } else {
-                    statusEl.innerText = "Online";
-                    statusEl.className = "status online";
-                }
+            if (hasError) {
+                // Condition: Error found (regardless of staleness) -> Show Error Status
+                let reason = "Offline (Error)";
+                if (isDisconnected) reason = "Offline (Disconnected)";
+                if (isServerIssue) reason = "Offline (Server Issue)";
+                
+                statusEl.innerText = reason;
+                statusEl.className = "status offline";
+            } else if (isStale) {
+                // Condition: No specific error, but data is old -> Show Offline
+                statusEl.innerText = "Offline";
+                statusEl.className = "status offline";
+            } else {
+                // Condition: Fresh data and no errors -> Online
+                statusEl.innerText = "Online";
+                statusEl.className = "status online";
+            }
 
             // Update Main Stats
             document.getElementById(`time-${index}`).innerText = uDate + " | " + logTimeStr;
@@ -609,6 +621,7 @@
                 const lvlEl = document.getElementById(`lvl-${index}`);
                 lvlEl.innerText = `${title} Lv. ${currentLevel}`;
                 lvlEl.style.color = getTitleColor(title);
+                lvlEl.style.fontWeight = 'bold';
 
                 const nlvlEl = document.getElementById(`nlvl-${index}`);
                 nlvlEl.innerText = `${ntitle} Lv. ${nextLevel}`;
