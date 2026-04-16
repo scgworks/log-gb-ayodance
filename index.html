@@ -361,7 +361,7 @@
         const myAccounts = [
             { name: "Roxveil", link: "https://www.dropbox.com/scl/fo/o4673p0c5idsdmhj5wgtn/AOBOX-7gI0oumeJCaL7G41s?rlkey=azncvpcgxzqgxkwswlumebj74&e=4&dl=0", lastLine: "" },
             { name: "-Lizette-", link: "https://www.dropbox.com/scl/fo/zczx029h00olhspfn6ooh/AJQDI6ACCshY_W3karOhsoU?rlkey=q9w4yw28ecinhwcnt3mcxvxwu&e=3&dl=0", lastLine: "" },
-            { name: "-Shiver", link: "https://www.dropbox.com/scl/fo/3e8g915x6ctlv8wm4mkzg/ALu8lgttz9LEp-9uyqJ5v8k?rlkey=v6zvs2frlgv47fw9v392vnbf6&e=1&dl=0", lastLine: "" },
+            { name: "-Shiver", link: "https://www.dropbox.com/scl/fo/3e8g915x6ctlv8wm4mkzg/ALu8lgttz9LEp-9uyqJ5v8k?rlkey=v6zvs2frlgv47fw9v392vnbf6&e=6&dl=0", lastLine: "" },
             { name: "-Swift", link: "https://www.dropbox.com/scl/fo/up5cag7ztg5qverrlplap/AOLoF6LrLF-Pp0uvf3ZFr6I?rlkey=dth9rb5bffjyobzzkp7r9x6u3&e=1&dl=0", lastLine: "" }
         ];
 
@@ -402,6 +402,7 @@
                                 <div class="row"><span class="label">Next Level</span><span id="nlvl-${index}" class="value">--</span></div>
                                 <div class="row"><span class="label">Next Level Goal</span><span id="nlvle-${index}" class="value">--</span></div>
                                 <div class="row"><span class="label">Remaining</span><span id="rem-${index}" class="value">--</span></div>
+                                <div class="row"><span class="label">EST Level Up</span><span id="estl-${index}" class="value">--</span></div>
                             </div>
 
                             <div class="bottom-grid">
@@ -429,7 +430,9 @@
 
         async function updateAccount(index) {
             const acc = myAccounts[index];
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Intl.DateTimeFormat('sv-SE', { 
+                timeZone: 'Asia/Jakarta' 
+            }).format(new Date());
             
             const token = await refreshAccessToken();
             if (!token) return;
@@ -471,13 +474,18 @@
                 }
 
             } catch (e) { 
-                document.getElementById(`status-${index}`).className = "status offline";
-                document.getElementById(`status-${index}`).innerText = "Offline (Link Error)";
+                console.error(e);
+                const statusEl = document.getElementById(`status-${index}`);
+                if (statusEl) {
+                    statusEl.innerText = "Offline (Link Error)";
+                    statusEl.className = "status offline";
+                }
             }
         }
 
         function renderUI(index, line, history) {
-            const logTime = line.split('=')[0];
+            const logTimeStr = line.split('=')[0].trim();
+            const logTime = new Date(logTimeStr);
             const statsPart = line.split('=')[1].split('|');
 
             // --- GMT+7 STALENESS CHECK ---
@@ -487,13 +495,9 @@
             }).format(now);
             const uDate = new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Jakarta', weekday:"short", day:"numeric", month:"short", year:"numeric"}).format(now);
 
-            const toSeconds = (t) => {
-                const [h, m, s] = t.split(':').map(Number);
-                return (h * 3600) + (m * 60) + s;
-            };
-
-            const diff = (toSeconds(currentWIBStr) - toSeconds(logTime) + 86400) % 86400;
-            const isStale = diff > 600; 
+            const isDisconnected = line.includes("Koneksi terputus.");
+            const isServerIssue = line.includes("Corrective action has been taken");
+            const isError = line.toLowerCase().includes("error");
             // -----------------------------
 
             const currentLevel = statsPart[0].replace('Lv.', '').trim();
@@ -504,16 +508,23 @@
 
             // Update Status: Check for Staleness OR "terputus" message
             const statusEl = document.getElementById(`status-${index}`);
-            if (isStale || line.includes("terputus")) {
-                statusEl.innerText = isStale ? "Offline (Stale)" : "Offline (Disconnected)";
-                statusEl.className = "status offline";
-            } else {
-                statusEl.innerText = "Online";
-                statusEl.className = "status online";
-            }
+                if (isDisconnected || isServerIssue || isError) {
+                    let reason = "Offline";
+                    
+                    // Optional: Specific labels so you know why it is offline
+                    if (isDisconnected) reason = "Offline (Disconnected)";
+                    else if (isServerIssue) reason = "Offline (Server Issue)";
+                    else if (isError) reason = "Offline (Error)";
+
+                    statusEl.innerText = reason;
+                    statusEl.className = "status offline";
+                } else {
+                    statusEl.innerText = "Online";
+                    statusEl.className = "status online";
+                }
 
             // Update Main Stats
-            document.getElementById(`time-${index}`).innerText = uDate + " | " + logTime;
+            document.getElementById(`time-${index}`).innerText = uDate + " | " + logTimeStr;
             document.getElementById(`exp-${index}`).innerText = currentTotalExp.toLocaleString();
             document.getElementById(`expg-${index}`).innerText = expGained;
 
@@ -528,8 +539,51 @@
             if (dbEntry) {
                 const goal = dbEntry.nextLevelGoal;
                 const thisExp = dbEntry3 ? dbEntry3.nextLevelGoal : 0;
+                const remainingExp = goal - currentTotalExp;
                 const title = dbEntry.title;
                 const ntitle = dbEntry2 ? dbEntry2.title : title;
+
+                // --- Updated EST Level Up Logic ---
+                let totalGained = 0;
+                let count = 0;
+
+                // Calculate average from last 10 logs
+                history.forEach(h => {
+                    if (h.includes('|') && h.includes('=')) {
+                        const parts = h.split('=')[1].split('|');
+                        const gain = parseInt(parts[1].replace(/,/g, '').trim());
+                        if (!isNaN(gain)) {
+                            totalGained += gain;
+                            count++;
+                        }
+                    }
+                });
+
+                const avgExp = count > 0 ? totalGained / count : 0;
+                let estTimeStr = "Calculating...";
+
+                if (dbEntry && avgExp > 0) {
+                    const remaining = dbEntry.nextLevelGoal - currentTotalExp; //
+                    const totalMinutes = (remaining / avgExp) * 169;
+
+                    // Breakdown into Days, Hours, and Minutes
+                    const d = Math.floor(totalMinutes / 86400);
+                    const h = Math.floor((totalMinutes % 86400) / 3600);
+                    const m = Math.floor((totalMinutes % 3600) / 60);
+
+                    // Format the string (e.g., "1d 4h 20m")
+                    let parts = [];
+                    if (d > 0) parts.push(`${d}d`);
+                    if (h > 0) parts.push(`${h}h`);
+                    if (m > 0 || parts.length === 0) parts.push(`${m}m`);
+                    
+                    estTimeStr = parts.join(' ');
+                }
+                
+                const estEl = document.getElementById(`estl-${index}`);
+                if (estEl) {
+                    estEl.innerText = estTimeStr;
+                }
 
                 // Safety: Prevent division by zero
                 let percent = 0;
